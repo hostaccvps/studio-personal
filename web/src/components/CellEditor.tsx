@@ -1,13 +1,8 @@
 import { Check, X } from 'lucide-react';
 import { useState } from 'react';
 import Modal from './Modal';
+import type { EntryPatch } from '../lib/api';
 import type { Entry, Status } from '../lib/types';
-
-export interface EntryPatch {
-  status: Status;
-  student_name: string | null;
-  student_code: string | null;
-}
 
 interface Props {
   title: string;

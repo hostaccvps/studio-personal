@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { errMsg, fetchProfessorEntries } from '../lib/api';
-import { supabase } from '../lib/supabase';
+import { errMsg, fetchProfessorEntries, updateScheduleEntry, type EntryPatch } from '../lib/api';
 import { slotLabel } from '../lib/time';
 import { cellKey, type Day, type Entry, type Slot } from '../lib/types';
 import { useConfig } from '../lib/useConfig';
-import CellEditor, { type EntryPatch } from './CellEditor';
+import CellEditor from './CellEditor';
 import WeekView, { type CellSpec } from './WeekView';
 
 /** Agenda editável de UM professor. Serve para "Minha agenda" e para o admin abrir a de qualquer professor. */
@@ -50,14 +49,14 @@ export default function ProfessorAgenda({ professorId }: { professorId: string }
     if (!current) return;
     setSaving(true);
     setSaveError(null);
-    const { data, error } = await supabase
-      .from('schedule_entries')
-      .update(patch)
-      .eq('id', current.id)
-      .select()
-      .maybeSingle();
+    let data: Entry | null = null;
+    try {
+      data = await updateScheduleEntry(current.id, patch);
+    } catch (e) {
+      setSaving(false);
+      return setSaveError(errMsg(e));
+    }
     setSaving(false);
-    if (error) return setSaveError(errMsg(error));
     if (!data) return setSaveError('Não foi possível salvar (sem permissão ou horário removido). Recarregue a página.');
     setEntries((prev) => new Map(prev).set(cellKey(data.weekday, data.time_slot_id), data as Entry));
     setEditing(null);

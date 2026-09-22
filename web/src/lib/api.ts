@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { sortSlots } from './time';
-import type { Day, Entry, Profile, Slot } from './types';
+import type { Day, Entry, Profile, Slot, Status } from './types';
 
 export function errMsg(e: unknown): string {
   if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message);
@@ -60,6 +60,24 @@ export async function fetchProfessorEntries(professorId: string): Promise<Entry[
   return fetchAll<Entry>((from, to) =>
     supabase.from('schedule_entries').select('*').eq('professor_id', professorId).order('id').range(from, to),
   );
+}
+
+export interface EntryPatch {
+  status: Status;
+  student_name: string | null;
+  student_code: string | null;
+}
+
+/**
+ * Marca uma célula como livre/ocupado/indisponível. Usada tanto por "Minha agenda"
+ * (professor editando a própria) quanto pelo admin (agenda de qualquer professor) —
+ * o RLS de schedule_entries decide quem pode gravar o quê; aqui é só o UPDATE.
+ * `data` vem nulo quando o RLS bloqueia silenciosamente (0 linhas) ou a célula sumiu.
+ */
+export async function updateScheduleEntry(entryId: string, patch: EntryPatch): Promise<Entry | null> {
+  const { data, error } = await supabase.from('schedule_entries').update(patch).eq('id', entryId).select().maybeSingle();
+  if (error) throw error;
+  return (data as Entry | null) ?? null;
 }
 
 export interface OccupiedRow {
