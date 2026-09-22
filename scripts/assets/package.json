@@ -1,0 +1,14 @@
+{
+  "name": "studio-personal-assets",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Scripts para gerar os logos/ícones do app a partir de /assets-marca",
+  "scripts": {
+    "logo": "node process-logo.mjs",
+    "icons": "node make-icons.mjs"
+  },
+  "dependencies": {
+    "sharp": "^0.33.5"
+  }
+}
