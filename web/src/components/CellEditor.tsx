@@ -1,13 +1,19 @@
-import { Check, X } from 'lucide-react';
+import { Check, RotateCcw, X } from 'lucide-react';
 import { useState } from 'react';
 import Modal from './Modal';
 import type { EntryPatch } from '../lib/api';
-import type { Entry, Status } from '../lib/types';
+import { addMinutesToTime, fmtTime, slotLabel, toDbTime, toInputTime, toMinutes } from '../lib/time';
+import type { Entry, Slot, Status } from '../lib/types';
+
+const CUSTOM_DURATION_MIN = 60;
 
 interface Props {
   title: string;
   subtitle: string;
   entry: Entry;
+  slot: Slot;
+  /** Só a tela "Minha agenda" deixa o professor customizar a hora da própria célula. */
+  allowCustomTime?: boolean;
   saving: boolean;
   error: string | null;
   onSave: (patch: EntryPatch) => void;
@@ -20,18 +26,30 @@ const OPTIONS: { value: Status; label: string; hint: string }[] = [
   { value: 'indisponivel', label: 'Indisponível', hint: 'Não atendo' },
 ];
 
-export default function CellEditor({ title, subtitle, entry, saving, error, onSave, onClose }: Props) {
+export default function CellEditor({ title, subtitle, entry, slot, allowCustomTime, saving, error, onSave, onClose }: Props) {
   const [status, setStatus] = useState<Status>(entry.status);
   const [name, setName] = useState(entry.student_name ?? '');
   const [code, setCode] = useState(entry.student_code ?? '');
+  const [customStart, setCustomStart] = useState(entry.actual_start_time ? toInputTime(entry.actual_start_time) : '');
+  const [timeError, setTimeError] = useState<string | null>(null);
   const nameMissing = status === 'ocupado' && name.trim() === '';
+
+  const minStart = toInputTime(slot.start_time);
+  const customEnd = customStart ? addMinutesToTime(customStart, CUSTOM_DURATION_MIN) : '';
 
   function submit() {
     if (nameMissing) return;
+    if (customStart && toMinutes(customStart) < toMinutes(minStart)) {
+      setTimeError(`Não pode ser antes do horário padrão desta linha (${fmtTime(slot.start_time)}).`);
+      return;
+    }
+    setTimeError(null);
     onSave({
       status,
       student_name: status === 'ocupado' ? name.trim() : null,
       student_code: status === 'ocupado' ? code.trim() || null : null,
+      actual_start_time: customStart ? toDbTime(customStart) : null,
+      actual_end_time: customStart ? toDbTime(customEnd) : null,
     });
   }
 
@@ -99,6 +117,40 @@ export default function CellEditor({ title, subtitle, entry, saving, error, onSa
             </label>
           </div>
         )}
+
+        {allowCustomTime && (
+          <div className="fields custom-time">
+            <label>
+              Hora customizada (opcional)
+              <input
+                type="time"
+                step={900}
+                min={minStart}
+                value={customStart}
+                onChange={(e) => {
+                  setTimeError(null);
+                  setCustomStart(e.target.value);
+                }}
+              />
+            </label>
+            {customStart ? (
+              <p className="muted small">
+                Duração fixa de {CUSTOM_DURATION_MIN} min — será <strong>{fmtTime(toDbTime(customStart))}</strong> às{' '}
+                <strong>{fmtTime(toDbTime(customEnd))}</strong>.
+              </p>
+            ) : (
+              <p className="muted small">Sem hora customizada, vale o horário padrão desta linha: {slotLabel(slot)}.</p>
+            )}
+            {customStart && (
+              <button type="button" className="btn small ghost" onClick={() => setCustomStart('')}>
+                <RotateCcw size={13} aria-hidden="true" />
+                Usar horário padrão
+              </button>
+            )}
+            {timeError && <p className="error small">{timeError}</p>}
+          </div>
+        )}
+
         {error && <p className="error">{error}</p>}
         <button type="submit" hidden />
       </form>

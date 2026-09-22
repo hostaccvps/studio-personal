@@ -66,6 +66,9 @@ export interface EntryPatch {
   status: Status;
   student_name: string | null;
   student_code: string | null;
+  /** Hora customizada da célula (opcional). Os dois vêm juntos, ou os dois nulos (usa o horário padrão do time_slot). */
+  actual_start_time?: string | null;
+  actual_end_time?: string | null;
 }
 
 /**

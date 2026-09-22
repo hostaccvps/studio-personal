@@ -7,8 +7,11 @@ export default function MySchedule() {
   return (
     <>
       <h1>Minha agenda</h1>
-      <p className="muted">Toque em um horário para marcar livre, ocupado ou indisponível. A grade é a mesma toda semana.</p>
-      <ProfessorAgenda professorId={profile.id} />
+      <p className="muted">
+        Toque em um horário para marcar livre, ocupado ou indisponível. A grade é a mesma toda semana — dá pra ajustar a
+        hora exata de cada horário também.
+      </p>
+      <ProfessorAgenda professorId={profile.id} allowCustomTime />
     </>
   );
 }

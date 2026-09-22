@@ -211,6 +211,11 @@ details.details-card .prof-list { margin-top: 10px; }
 }
 .cell-main { font-weight: 600; overflow: hidden; text-overflow: ellipsis; max-width: 100%; white-space: nowrap; }
 .cell-code { font-size: .75rem; opacity: .8; }
+.cell-time {
+  font-size: .68rem; font-weight: 700; letter-spacing: .01em; opacity: .85;
+  background: rgba(0, 0, 0, .18); border-radius: 4px; padding: 0 4px; margin-bottom: 1px;
+}
+.slot-row .cell-time { order: -1; margin: 0 0 0 -2px; }
 .cell.livre { background: var(--accent-soft); color: var(--accent); }
 .cell.ocupado { background: var(--ocupado-soft); color: var(--ocupado); }
 .cell.indisp { background: var(--indisp-bg); color: var(--text-faint); }
@@ -263,6 +268,9 @@ details.details-card .prof-list { margin-top: 10px; }
 .status-opt.ocupado.selected { background: var(--ocupado-soft); border-color: var(--ocupado); }
 .status-opt.indisponivel.selected { background: var(--indisp-bg); border-color: var(--text-faint); }
 .fields { display: block; }
+.fields.custom-time { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.fields.custom-time p { margin: 8px 0; }
+.fields.custom-time .btn { margin-top: 4px; }
 
 /* ---------- admin ---------- */
 .kpis { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; }

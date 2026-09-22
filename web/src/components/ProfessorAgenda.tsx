@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { errMsg, fetchProfessorEntries, updateScheduleEntry, type EntryPatch } from '../lib/api';
-import { slotLabel } from '../lib/time';
+import { effectiveRange, slotLabel } from '../lib/time';
 import { cellKey, type Day, type Entry, type Slot } from '../lib/types';
 import { useConfig } from '../lib/useConfig';
 import CellEditor from './CellEditor';
 import WeekView, { type CellSpec } from './WeekView';
 
+interface Props {
+  professorId: string;
+  /** Só "Minha agenda" liga isso — a agenda aberta pelo admin fica como estava. */
+  allowCustomTime?: boolean;
+}
+
 /** Agenda editável de UM professor. Serve para "Minha agenda" e para o admin abrir a de qualquer professor. */
-export default function ProfessorAgenda({ professorId }: { professorId: string }) {
+export default function ProfessorAgenda({ professorId, allowCustomTime = false }: Props) {
   const cfg = useConfig();
   const [entries, setEntries] = useState<Map<string, Entry>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -69,21 +75,44 @@ export default function ProfessorAgenda({ professorId }: { professorId: string }
       setEditing({ day, slot });
     };
     if (!e) return { className: 'missing', content: '·', ariaLabel: 'Sem célula' };
+    const range = allowCustomTime || e.actual_start_time ? effectiveRange(e, slot) : null;
+    const timeBadge = range?.custom ? <span className="cell-time">{range.label}</span> : null;
     if (e.status === 'livre')
-      return { className: 'livre', content: <span className="cell-main">Livre</span>, onClick: open, ariaLabel: `${day.label} ${slotLabel(slot)}: livre` };
+      return {
+        className: 'livre',
+        content: (
+          <>
+            {timeBadge}
+            <span className="cell-main">Livre</span>
+          </>
+        ),
+        onClick: open,
+        ariaLabel: `${day.label} ${range?.label ?? slotLabel(slot)}: livre`,
+      };
     if (e.status === 'ocupado')
       return {
         className: 'ocupado',
         content: (
           <>
+            {timeBadge}
             <span className="cell-main">{e.student_name}</span>
             {e.student_code && <span className="cell-code">{e.student_code}</span>}
           </>
         ),
         onClick: open,
-        ariaLabel: `${day.label} ${slotLabel(slot)}: ocupado, ${e.student_name}`,
+        ariaLabel: `${day.label} ${range?.label ?? slotLabel(slot)}: ocupado, ${e.student_name}`,
       };
-    return { className: 'indisp', content: <span className="cell-main">—</span>, onClick: open, ariaLabel: `${day.label} ${slotLabel(slot)}: indisponível` };
+    return {
+      className: 'indisp',
+      content: (
+        <>
+          {timeBadge}
+          <span className="cell-main">—</span>
+        </>
+      ),
+      onClick: open,
+      ariaLabel: `${day.label} ${range?.label ?? slotLabel(slot)}: indisponível`,
+    };
   }
 
   if (cfg.loading || loading) return <p className="muted">Carregando agenda…</p>;
@@ -105,6 +134,8 @@ export default function ProfessorAgenda({ professorId }: { professorId: string }
           title={`${editing.day.label} · ${slotLabel(editing.slot)}`}
           subtitle="O que acontece neste horário toda semana?"
           entry={editingEntry}
+          slot={editing.slot}
+          allowCustomTime={allowCustomTime}
           saving={saving}
           error={saveError}
           onSave={(p) => void save(p)}

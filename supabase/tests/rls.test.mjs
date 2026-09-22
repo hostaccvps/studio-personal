@@ -228,6 +228,27 @@ await as(admin, `update public.profiles set active=true where id=$1`, [p2]);
 r = await as(p2, `select count(*)::int n from public.schedule_entries`);
 ok(r.rows[0].n === 90, 'Bia reativada volta a ver as células: ' + r.rows[0].n);
 
+console.log('\nhorário customizado (actual_start_time / actual_end_time)');
+const slotStart = (await db.query(`select start_time from public.time_slots where id=$1`, [slot])).rows[0].start_time;
+const addMin = (t, m) => {
+  const [h, mi] = t.split(':').map(Number);
+  const total = ((h * 60 + mi + m) % 1440 + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}:00`;
+};
+
+r = await as(p1, `update public.schedule_entries set actual_start_time=$2, actual_end_time=$3 where id=$1 returning actual_start_time, actual_end_time`, [own, addMin(slotStart, 30), addMin(slotStart, 90)]);
+ok(r.rows[0].actual_start_time === addMin(slotStart, 30) && r.rows[0].actual_end_time === addMin(slotStart, 90), 'Ana define hora customizada na própria célula');
+
+r = await as(p1, `update public.schedule_entries set actual_start_time=null, actual_end_time=null where id=$1 returning actual_start_time`, [own]);
+ok(r.rows[0].actual_start_time === null, '"Usar horário padrão" limpa os dois campos');
+
+ok(!!(await fails(p1, `update public.schedule_entries set actual_start_time=$2 where id=$1`, [own, addMin(slotStart, 30)])), 'rejeita hora customizada com só um dos campos preenchido');
+ok(!!(await fails(p1, `update public.schedule_entries set actual_start_time=$2, actual_end_time=$3 where id=$1`, [own, addMin(slotStart, 30), addMin(slotStart, 45)])), 'rejeita duração customizada diferente de 60 minutos');
+ok(!!(await fails(p1, `update public.schedule_entries set actual_start_time=$2, actual_end_time=$3 where id=$1`, [own, addMin(slotStart, -30), addMin(slotStart, 30)])), 'rejeita hora customizada antes do horário padrão da linha');
+
+r = await as(p1, `update public.schedule_entries set actual_start_time=$2, actual_end_time=$3 where id=$1 returning id`, [other, addMin(slotStart, 30), addMin(slotStart, 90)]);
+ok(r.affectedRows === 0, 'Ana não consegue customizar a hora de uma célula da Bia');
+
 console.log('\ncadastro / aprovação de professores');
 
 // cadastro novo: nasce pendente mesmo mandando role/status forjados no metadata

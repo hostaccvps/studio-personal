@@ -35,6 +35,8 @@ export interface Entry {
   status: Status;
   student_name: string | null;
   student_code: string | null;
+  actual_start_time: string | null;
+  actual_end_time: string | null;
 }
 
 export const cellKey = (weekday: number, slotId: string) => `${weekday}:${slotId}`;
