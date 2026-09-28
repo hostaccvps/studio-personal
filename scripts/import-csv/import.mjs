@@ -266,7 +266,8 @@ function buildWrites(parsed, professor, slots, days, skip) {
         time_slot_id: slot.id,
         status: cell.status,
         student_name: cell.name,
-        student_code: cell.code,
+        // o banco exige código em célula ocupada; sem número no CSV, entra 'N/A'
+        student_code: cell.status === 'ocupado' ? (cell.code ?? 'N/A') : null,
         _time: row.time,
       });
     }

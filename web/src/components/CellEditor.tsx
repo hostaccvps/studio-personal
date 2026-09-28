@@ -33,12 +33,18 @@ export default function CellEditor({ title, subtitle, entry, slot, allowCustomTi
   const [customStart, setCustomStart] = useState(entry.actual_start_time ? toInputTime(entry.actual_start_time) : '');
   const [timeError, setTimeError] = useState<string | null>(null);
   const nameMissing = status === 'ocupado' && name.trim() === '';
+  const codeMissing = status === 'ocupado' && code.trim() === '';
+  const [showCodeError, setShowCodeError] = useState(false);
 
   const minStart = toInputTime(slot.start_time);
   const customEnd = customStart ? addMinutesToTime(customStart, CUSTOM_DURATION_MIN) : '';
 
   function submit() {
     if (nameMissing) return;
+    if (codeMissing) {
+      setShowCodeError(true);
+      return;
+    }
     if (customStart && toMinutes(customStart) < toMinutes(minStart)) {
       setTimeError(`Não pode ser antes do horário padrão desta linha (${fmtTime(slot.start_time)}).`);
       return;
@@ -47,7 +53,7 @@ export default function CellEditor({ title, subtitle, entry, slot, allowCustomTi
     onSave({
       status,
       student_name: status === 'ocupado' ? name.trim() : null,
-      student_code: status === 'ocupado' ? code.trim() || null : null,
+      student_code: status === 'ocupado' ? code.trim() : null,
       actual_start_time: customStart ? toDbTime(customStart) : null,
       actual_end_time: customStart ? toDbTime(customEnd) : null,
     });
@@ -63,7 +69,7 @@ export default function CellEditor({ title, subtitle, entry, slot, allowCustomTi
             <X size={14} aria-hidden="true" />
             Cancelar
           </button>
-          <button className="btn primary" onClick={submit} disabled={saving || nameMissing}>
+          <button className="btn primary" onClick={submit} disabled={saving || nameMissing || codeMissing}>
             <Check size={14} aria-hidden="true" />
             {saving ? 'Salvando…' : 'Salvar'}
           </button>
@@ -106,15 +112,21 @@ export default function CellEditor({ title, subtitle, entry, slot, allowCustomTi
               />
             </label>
             <label>
-              Código (opcional)
+              Código
               <input
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
+                onChange={(e) => {
+                  setCode(e.target.value);
+                  setShowCodeError(false);
+                }}
+                required
+                aria-invalid={showCodeError}
                 inputMode="numeric"
                 autoComplete="off"
                 placeholder="ex.: 1310"
               />
             </label>
+            {(showCodeError || (codeMissing && name.trim() !== '')) && <p className="error small">Código é obrigatório</p>}
           </div>
         )}
 

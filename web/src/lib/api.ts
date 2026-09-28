@@ -78,6 +78,7 @@ export interface EntryPatch {
  * `data` vem nulo quando o RLS bloqueia silenciosamente (0 linhas) ou a célula sumiu.
  */
 export async function updateScheduleEntry(entryId: string, patch: EntryPatch): Promise<Entry | null> {
+  if (patch.status === 'ocupado' && !patch.student_code?.trim()) throw new Error('Código é obrigatório');
   const { data, error } = await supabase.from('schedule_entries').update(patch).eq('id', entryId).select().maybeSingle();
   if (error) throw error;
   return (data as Entry | null) ?? null;

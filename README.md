@@ -34,6 +34,7 @@ Você vai precisar de: uma conta no [Supabase](https://supabase.com), uma no [Cl
 1. No Supabase, menu **SQL Editor** → **New query**.
 2. Abra o arquivo `supabase/migrations/0001_initial.sql`, copie **tudo**, cole no editor e clique **Run**. Deve aparecer "Success". Isso cria as tabelas, as regras de segurança (RLS) e a configuração inicial: **segunda a sexta, blocos de 60 min das 6:00 às 19:00** (o último bloco termina às 20:00). Depois você ajusta tudo pelo próprio app, na tela **Horários**.
 3. Abra uma **New query** de novo, cole **tudo** de `supabase/migrations/0002_aprovacao_professores.sql` e clique **Run**. Essa é a migração que adiciona o autocadastro de professores com aprovação do admin (explicado no passo 3 a seguir).
+4. Repita com `0003_actual_times.sql` (hora customizada por célula) e depois `0004_student_code_required.sql` (código do aluno obrigatório em horário ocupado; células ocupadas antigas sem código ficam com `N/A`).
 
 > Rode cada migração **uma vez só**, nessa ordem (0001, depois 0002). Se precisar refazer do zero, apague o projeto e crie outro (ou peça ajuda).
 >
@@ -151,7 +152,7 @@ O arquivo `web/public/_redirects` já faz o app funcionar ao abrir/atualizar em 
 | 6:00 | VENDA | luciano 1310 | |
 
 - `VENDA` → **livre** · célula vazia → **indisponível** · qualquer outro texto → **ocupado**.
-- Em `luciano 1310`, o número no final vira o **código** e o resto o **nome**. `joão` (sem número) fica só com nome.
+- Em `luciano 1310`, o número no final vira o **código** e o resto o **nome**. `joão` (sem número) fica com o código `N/A`, porque o código é obrigatório em horário ocupado.
 - Os professores precisam já existir e estar **aprovados** (passo 7). Se o nome do arquivo corresponder a um professor pendente ou recusado, o script avisa claramente e pula o arquivo — aprove-o primeiro no app.
 
 **Rodar** (no seu computador):
@@ -213,7 +214,7 @@ Opções: `--dry-run` (só simula), `--yes` (responde "sim" a tudo, use com cuid
 ## Testes (opcional)
 
 ```bash
-cd supabase/tests && npm install && npm test     # ~65 verificações de RLS/triggers/aprovação num Postgres embutido
+cd supabase/tests && npm install && npm test     # ~75 verificações de RLS/triggers/aprovação num Postgres embutido
 cd scripts/import-csv && npm test                # parser do CSV
 cd web && npm run build                          # checagem de tipos + build
 ```

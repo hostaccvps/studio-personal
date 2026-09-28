@@ -92,6 +92,10 @@ if (MIGRATIONS.length > 1) {
   // agenda real: uma célula ocupada, para conferir que nada some
   const cell = (await db.query(`select id from public.schedule_entries where professor_id=$1 limit 1`, [p1])).rows[0].id;
   await db.query(`update public.schedule_entries set status='ocupado', student_name='Aluno Antigo', student_code='42' where id=$1`, [cell]);
+  // ocupado antigo SEM código (a 0004 deve preencher com N/A) e uma livre (deve continuar sem código)
+  const legacyRows = (await db.query(`select id from public.schedule_entries where professor_id=$1 and id<>$2 order by id limit 2`, [p1, cell])).rows;
+  await db.query(`update public.schedule_entries set status='ocupado', student_name='Sem Codigo' where id=$1`, [legacyRows[0].id]);
+  await db.query(`update public.schedule_entries set status='livre' where id=$1`, [legacyRows[1].id]);
   const beforeCount = (await db.query(`select count(*)::int n from public.schedule_entries`)).rows[0].n;
 
   for (const f of MIGRATIONS.slice(1)) await db.exec(fs.readFileSync(f, 'utf8'));
@@ -105,6 +109,11 @@ if (MIGRATIONS.length > 1) {
 
   r = await db.query(`select count(*)::int n from public.schedule_entries`);
   ok(r.rows[0].n === beforeCount, `nenhuma linha de agenda foi perdida ou duplicada (${beforeCount} -> ${r.rows[0].n})`);
+
+  r = await db.query(`select student_code from public.schedule_entries where id=$1`, [legacyRows[0].id]);
+  ok(r.rows[0].student_code === 'N/A', 'ocupado antigo sem código vira N/A depois da 0004');
+  r = await db.query(`select status, student_code from public.schedule_entries where id=$1`, [legacyRows[1].id]);
+  ok(r.rows[0].status === 'livre' && r.rows[0].student_code === null, 'célula livre continua sem código (a regra só vale para ocupado)');
 
   r = await as(admin, `update public.schedule_days set active=true where weekday=6`);
   ok(r.affectedRows === 1, 'admin antigo continua sendo admin (is_admin() considera aprovado) depois da 0002');
@@ -227,6 +236,14 @@ ok(r.rows[0].n === 1, 'sync não duplica células');
 await as(admin, `update public.profiles set active=true where id=$1`, [p2]);
 r = await as(p2, `select count(*)::int n from public.schedule_entries`);
 ok(r.rows[0].n === 90, 'Bia reativada volta a ver as células: ' + r.rows[0].n);
+
+console.log('\ncódigo do aluno obrigatório');
+ok(!!(await fails(p1, `update public.schedule_entries set status='ocupado', student_name='Sem Codigo', student_code=null where id=$1`, [own])), 'ocupado sem código é rejeitado');
+ok(!!(await fails(p1, `update public.schedule_entries set status='ocupado', student_name='Sem Codigo', student_code='   ' where id=$1`, [own])), 'ocupado com código só de espaços é rejeitado');
+r = await as(p1, `update public.schedule_entries set status='ocupado', student_name='Com Codigo', student_code='77' where id=$1 returning student_code`, [own]);
+ok(r.rows[0].student_code === '77', 'ocupado com código é aceito');
+r = await as(p1, `update public.schedule_entries set status='livre' where id=$1 returning student_code`, [own]);
+ok(r.rows[0].student_code === null, 'voltar a livre continua limpando o código (não exige)');
 
 console.log('\nhorário customizado (actual_start_time / actual_end_time)');
 const slotStart = (await db.query(`select start_time from public.time_slots where id=$1`, [slot])).rows[0].start_time;
